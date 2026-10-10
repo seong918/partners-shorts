@@ -1,0 +1,22 @@
+/* Hallmark · Studio · light / serif wordmark / green · Korean product catalogue */
+:root {
+  --color-paper: oklch(97% 0.008 150);
+  --color-surface: oklch(94% 0.012 150);
+  --color-ink: oklch(24% 0.021 155);
+  --color-muted: oklch(45% 0.023 155);
+  --color-rule: oklch(80% 0.017 155);
+  --color-accent: oklch(38% 0.081 155);
+  --color-accent-ink: oklch(98% 0.005 150);
+  --color-focus: oklch(32% 0.08 155);
+  --color-error: oklch(44% 0.15 28);
+  --color-transparent: transparent;
+  --font-display: 'Cormorant Garamond', 'Noto Sans KR', serif;
+  --font-body: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif;
+  --space-xs: 4px; --space-sm: 8px; --space-md: 16px; --space-lg: 24px;
+  --space-xl: 32px; --space-2xl: 48px; --space-3xl: 64px;
+  --text-sm: 0.875rem; --text-base: 1rem; --text-md: 1.25rem;
+  --text-lg: 1.75rem; --text-display: clamp(2rem, 4vw, 3rem);
+  --rule-hair: 1px; --radius-sm: 4px;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-micro: 120ms;
+}

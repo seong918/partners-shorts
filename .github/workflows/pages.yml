@@ -1,0 +1,64 @@
+name: Publish product catalog
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Stage public files only
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, pathlib, re, shutil
+          from urllib.parse import unquote
+          root = pathlib.Path('.')
+          names = ['index.html', 'tokens.css', 'styles.css', 'app.js', 'products.json', '.nojekyll']
+          images = list(root.glob('assets/*.jpg'))
+          assert all(re.fullmatch(r'[a-f0-9]{64}\.jpg', p.name) and not p.is_symlink() for p in images)
+          allowed = set(names + ['README.md', '.gitignore', '.github/workflows/pages.yml'] + [str(p) for p in images])
+          for p in root.rglob('*'):
+              if '.git' in p.parts:
+                  continue
+              assert not p.is_symlink(), 'Symlink is not a public asset'
+              if p.is_file():
+                  assert str(p) in allowed, 'Unexpected repository file'
+          sensitive = re.compile(r'gh[pousr]_[A-Za-z0-9_]{20,}|github_pat_[A-Za-z0-9_]{20,}|sk-[A-Za-z0-9_-]{20,}|AKIA[A-Z0-9]{16}|-----BEGIN [A-Z ]*PRIVATE KEY-----|(?:access_token|refresh_token|client_secret|api_key|authorization|password)\s*[:=]\s*[^\s,}]+|/(?:Users|home|private|var)/|file:[/][/]|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}', re.I)
+          for name in names + ['README.md']:
+              assert not sensitive.search(unquote((root / name).read_text())), 'Sensitive public text'
+          for p in images:
+              content = p.read_bytes()
+              assert hashlib.sha256(content).hexdigest() == p.stem
+              assert b'Exif\x00\x00' not in content and b'http://ns.adobe.com/xap/1.0/' not in content
+          doc = json.loads(pathlib.Path('products.json').read_text())
+          assert set(doc) == {'schema_version', 'title', 'disclosure', 'products'}
+          fields = {'number','revision','name','category','summary','image','affiliate_url','status','checked_at','valid_until','price','videos'}
+          assert all(set(p) == fields for p in doc['products'])
+          out = root / '_site'
+          out.mkdir()
+          for name in names + [str(p) for p in images]:
+              source = root / name
+              assert not source.is_symlink()
+              target = out / name
+              target.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(source, target)
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4
