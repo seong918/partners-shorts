@@ -55,12 +55,18 @@ function render() {
       const a = element('a', className); a.href = url; a.target = '_blank'; a.rel = 'sponsored nofollow noopener noreferrer';
       if (ariaLabel) a.setAttribute('aria-label', ariaLabel);
       a.dataset.validUntil = p.valid_until;
-      a.addEventListener('click', event => { if (Date.parse(p.valid_until) <= Date.now()) { event.preventDefault(); render(); } });
+      const guard = event => { if (Date.parse(p.valid_until) <= Date.now()) { event.preventDefault(); render(); } };
+      a.addEventListener('click', guard); a.addEventListener('auxclick', guard);
       a.append(content); return a;
     };
     const title = element('h3');
     if (url) title.append(outbound('title-link', p.name)); else title.textContent = p.name;
-    card.append(url ? outbound('photo-link', photo, label) : photo, meta, title, element('p', 'description', p.summary));
+    let photoBlock = photo;
+    if (url) {
+      // 사진 링크는 마우스·터치용이다. 키보드·스크린리더에는 상품명 링크와 하단 버튼만 노출해 탭 정지를 늘리지 않는다.
+      photoBlock = outbound('photo-link', photo); photoBlock.tabIndex = -1; photoBlock.setAttribute('aria-hidden', 'true');
+    }
+    card.append(photoBlock, meta, title, element('p', 'description', p.summary));
     if (valid && Number.isInteger(p.price)) card.append(element('p', 'price', `${p.price.toLocaleString('ko-KR')}원`));
     if (p.checked_at) card.append(element('p', 'checked', `${new Date(p.checked_at).toLocaleDateString('ko-KR')} 확인 · 가격 변동 가능`));
     if (url) {
