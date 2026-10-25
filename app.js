@@ -47,15 +47,24 @@ function render() {
       photo.append(img);
     } else photo.textContent = '사진 준비 중';
     const meta = element('div', 'product-meta'); meta.append(element('span', 'number', `${String(p.number).padStart(2, '0')}번`), element('span', '', p.category));
-    card.append(photo, meta, element('h3', '', p.name), element('p', 'description', p.summary));
     const valid = p.status === 'approved' && Date.parse(p.valid_until) > Date.now();
+    const url = valid && safeLink(p.affiliate_url, 'purchase');
+    const label = `${p.number}번 ${p.name} 쿠팡에서 확인 (새 창)`;
+    // 사진·상품명·하단 버튼이 모두 같은 제휴 링크를 연다. 만료된 링크는 클릭 시점에 다시 숨긴다.
+    const outbound = (className, content, ariaLabel) => {
+      const a = element('a', className); a.href = url; a.target = '_blank'; a.rel = 'sponsored nofollow noopener noreferrer';
+      if (ariaLabel) a.setAttribute('aria-label', ariaLabel);
+      a.dataset.validUntil = p.valid_until;
+      a.addEventListener('click', event => { if (Date.parse(p.valid_until) <= Date.now()) { event.preventDefault(); render(); } });
+      a.append(content); return a;
+    };
+    const title = element('h3');
+    if (url) title.append(outbound('title-link', p.name)); else title.textContent = p.name;
+    card.append(url ? outbound('photo-link', photo, label) : photo, meta, title, element('p', 'description', p.summary));
     if (valid && Number.isInteger(p.price)) card.append(element('p', 'price', `${p.price.toLocaleString('ko-KR')}원`));
     if (p.checked_at) card.append(element('p', 'checked', `${new Date(p.checked_at).toLocaleDateString('ko-KR')} 확인 · 가격 변동 가능`));
-    const url = valid && safeLink(p.affiliate_url, 'purchase');
     if (url) {
-      const link = element('a', 'purchase', '쿠팡에서 확인'); link.href = url; link.target = '_blank'; link.rel = 'sponsored nofollow noopener noreferrer'; link.setAttribute('aria-label', `${p.number}번 ${p.name} 쿠팡에서 확인 (새 창)`); link.append(element('span', '', '↗')); card.append(link);
-      link.dataset.validUntil = p.valid_until;
-      link.addEventListener('click', event => { if (Date.parse(p.valid_until) <= Date.now()) { event.preventDefault(); render(); } });
+      const link = outbound('purchase', '쿠팡에서 확인', label); link.append(element('span', '', '↗')); card.append(link);
     } else card.append(element('span', 'purchase unavailable', p.status === 'out_of_stock' ? '품절 · 링크 확인 중' : p.status === 'retired' ? '소개가 종료된 상품' : '상품 정보 확인 중'));
     const videos = element('div', 'video-links');
     (p.videos || []).slice(0, 2).forEach((value, i) => { const url = safeLink(value, 'video'); if (url) { const a = element('a', '', `소개 영상 ${i + 1} ↗`); a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; videos.append(a); } });
